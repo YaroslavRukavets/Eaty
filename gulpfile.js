@@ -5,7 +5,7 @@ var browserSync = require('browser-sync').create();
 const readFile = promisify(fs.readFile);
 
 gulp.task('default', ['less', "mustache"], function() {
-  gulp.watch('./src/styles/**/*.less', ['less']);
+  gulp.watch('./src/style/**/*.less', ['less']);
   gulp.watch("./src/images/*.*", ["copy"]);
   gulp.watch([
     './src/data/data.json',
@@ -17,11 +17,11 @@ var less = require('gulp-less');
 var path = require('path');
 
 gulp.task('less', function () {
-  return gulp.src('./src/styles/**/*.less')
+  return gulp.src('./src/style/**/*.less')
   .pipe(less({
     paths: [ path.join(__dirname, 'less', 'includes') ]
   }))
-  .pipe(gulp.dest('./docs/styles'));
+  .pipe(gulp.dest('./docs/style'));
 });
 
 var mustache = require("gulp-mustache");
@@ -42,6 +42,6 @@ gulp.task('server', function(){
         server:{
             baseDir: "docs/"
         },
-        files: ['docs/*.html','docs/*.styles','docs/images/*.*']
+        files: ['docs/*.html','docs/*.style','docs/images/*.*']
     });
 });
