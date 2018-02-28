@@ -1,47 +1,94 @@
-var gulp = require('gulp');
-var fs = require("fs");
-var {promisify} = require("util");
-var browserSync = require('browser-sync').create();
+const mustache = require("gulp-mustache");
+const { promisify } = require("util");
+const less = require("gulp-less");
+const gulp = require("gulp");
+const path = require("path");
+const fs = require("fs");
+const browserSync = require('browser-sync').create();
+const plumber = require('gulp-plumber');
+const autoprefixer = require('gulp-autoprefixer');
+const cssnano = require('gulp-cssnano');
+const htmlmin = require('gulp-htmlmin');
+const rename = require("gulp-rename");
+const htmlreplace = require('gulp-html-replace');
+const concat = require('gulp-concat');
+const clean = require('gulp-clean');
+const svgo = require('gulp-svgo');
+const gulpSequence = require('gulp-sequence');
+
 const readFile = promisify(fs.readFile);
 
-gulp.task('default', ['less', "mustache"], function() {
-  gulp.watch('./src/style/**/*.less', ['less']);
-  gulp.watch("./src/images/*.*", ["copy"]);
-  gulp.watch([
-    './src/data/data.json',
-    './src/**/*.html'
-  ], ['mustache']);
+const SRC_FOLDER = "./src";
+const DESTINATION_FOLDER = "./docs";
+
+const STYLE_PATH_SRC = SRC_FOLDER + "/style/**/*.less";
+const DATA_PATH = SRC_FOLDER + "/data/db.json";
+const HTML_PATH = SRC_FOLDER + "/**/*.mustache";
+
+const IMAGE_FOLDER_SRC = SRC_FOLDER + "/images/*.*";
+const IMAGE_FOLDER_DESTINATION = DESTINATION_FOLDER + "/images";
+
+gulp.task("watch", () => {
+    gulp.watch(IMAGE_FOLDER_SRC, ["images"]);
+    gulp.watch(STYLE_PATH_SRC, ["less"]);
+    gulp
+        .watch([DATA_PATH, HTML_PATH], ["mustache"])
+        .on('change', browserSync.reload);
 });
 
-var less = require('gulp-less');
-var path = require('path');
-
-gulp.task('less', function () {
-  return gulp.src('./src/style/**/*.less')
-  .pipe(less({
-    paths: [ path.join(__dirname, 'less', 'includes') ]
-  }))
-  .pipe(gulp.dest('./docs/style'));
+gulp.task("images", () => {
+    gulp
+        .src(IMAGE_FOLDER_SRC)
+        .pipe(plumber())
+        .pipe(svgo())
+        .pipe(gulp.dest(IMAGE_FOLDER_DESTINATION))
 });
 
-var mustache = require("gulp-mustache");
+gulp.task("clean", () => gulp.src('./docs').pipe(clean()) );
+
+gulp.task("less", () =>
+    gulp
+        .src(STYLE_PATH_SRC)
+        .pipe(plumber())
+        .pipe(
+            less({paths: [path.join(__dirname, "less", "includes")]})
+        )
+        .pipe(autoprefixer({
+            browsers: ['last 2 versions'],
+            cascade: false
+        }))
+        .pipe(concat('style.min.css'))
+        .pipe(cssnano())
+        .pipe(gulp.dest(DESTINATION_FOLDER))
+        .pipe(browserSync.stream())
+);
+
 gulp.task("mustache", async () => {
-  const data = JSON.parse(await readFile("./src/data/data.json", "utf-8"));
+    const data = JSON.parse(await readFile(DATA_PATH, "utf-8"));
+    return gulp
+        .src(HTML_PATH)
 
-  return gulp.src("./src/**/*.html")
-  .pipe(mustache(data))
-  .pipe(gulp.dest("./docs"));
-})
-
-gulp.task('copy', function () {
-    gulp.src('./src/images/*.*')
-        .pipe(gulp.dest('./docs/images/'));
+        .pipe(plumber())
+        .pipe(mustache(data))
+        .pipe(htmlmin({collapseWhitespace: true}))
+        .pipe(htmlreplace({
+            'css': 'style.min.css'
+        }))
+        .pipe(rename( path => {
+            path.extname = ".html"
+        }))
+        .pipe(gulp.dest(DESTINATION_FOLDER));
 });
-gulp.task('server', function(){
+
+
+gulp.task('browser-sync', function() {
     browserSync.init({
-        server:{
-            baseDir: "docs/"
-        },
-        files: ['docs/*.html','docs/*.style','docs/images/*.*']
+        server: DESTINATION_FOLDER
     });
 });
+
+gulp.task("default", gulpSequence(
+    "clean",
+    ["images", "less", "mustache", "browser-sync"],
+    "watch"
+));
