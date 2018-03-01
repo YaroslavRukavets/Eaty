@@ -23,7 +23,7 @@ const DESTINATION_FOLDER = "./docs";
 
 const STYLE_PATH_SRC = SRC_FOLDER + "/style/**/*.less";
 const DATA_PATH = SRC_FOLDER + "/data/db.json";
-const HTML_PATH = SRC_FOLDER + "/**/*.mustache";
+const HTML_PATH = SRC_FOLDER + "/**/*.html";
 
 const IMAGE_FOLDER_SRC = SRC_FOLDER + "/images/*.*";
 const IMAGE_FOLDER_DESTINATION = DESTINATION_FOLDER + "/images";
